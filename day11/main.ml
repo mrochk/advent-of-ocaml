@@ -1,7 +1,7 @@
 let input = open_in "input.txt"
 
-type operation = Multiply | Sum
-type operand = Old | New of int
+type operation = Mul | Sum
+type operand   = Old | N of int
 
 type monkey = {
   mutable count : int;
@@ -9,8 +9,8 @@ type monkey = {
   operation : operation;
   operand : operand;
   test : int;
-  ttrue : int;
-  ffalse : int;
+  test_true : int;
+  test_false : int;
 }
 
 let parse_items line =
@@ -25,9 +25,9 @@ let parse_operation line =
   let line = String.sub line 21 (String.length line - 21) in
   match String.split_on_char ' ' line with
   | [ "+"; "old" ] -> (Sum, Old)
-  | [ "*"; "old" ] -> (Multiply, Old)
-  | [ "+"; n ] -> (Sum, New (int_of_string n))
-  | [ "*"; n ] -> (Multiply, New (int_of_string n))
+  | [ "*"; "old" ] -> (Mul, Old)
+  | [ "+"; n ] -> (Sum, N (int_of_string n))
+  | [ "*"; n ] -> (Mul, N (int_of_string n))
   | _ -> failwith ""
 
 let parse_test line =
@@ -40,45 +40,43 @@ let parse_if line =
   let list = String.split_on_char ' ' line in
   int_of_string (List.nth list 5)
 
-let rec make_list n =
-  if n = 0 then []
+let skip_line ic = let _ = input_line ic in ()
+
+let rec make_list line_num =
+  if line_num = 0 then []
   else
-    let _ = input_line input in
-    let line = input_line input in
-    let items = parse_items line in
-    let line = input_line input in
-    let operation, operand = parse_operation line in
-    let line = input_line input in
-    let test = parse_test line in
-    let line = input_line input in
-    let ttrue = parse_if line in
-    let line = input_line input in
-    let ffalse = parse_if line in
-    let _ = if n = 1 then "" else input_line input in
-    { count = 0; items; operation; operand; test; ttrue; ffalse }
-    :: make_list (n - 1)
+    let () = skip_line input in
+    let items = parse_items (input_line input) in
+    let operation, operand = parse_operation (input_line input) in
+    let test = parse_test (input_line input) in
+    let test_true = parse_if (input_line input) in
+    let test_false = parse_if (input_line input) in
+    let _ = if line_num = 1 then "" else input_line input in
+    { count = 0; items; operation; operand; test; test_true; test_false }
+    :: make_list (line_num - 1)
 
 let monkeys = Array.of_list (make_list 8)
 
-let compute_wlevel item = function
-  | Multiply, Old -> item * item
+let get_worry_level item = function
+  | Mul, Old -> item * item
   | Sum, Old -> item + item
-  | Multiply, New n -> item * n
-  | Sum, New n -> item + n
+  | Mul, N n -> item * n
+  | Sum, N n -> item + n
 
 let rec remove element = function
   | [] -> []
   | h :: t -> if h = element then t else h :: remove element t
 
+
 let rec step m =
   let rec aux = function
     | [] -> ()
     | h :: t ->
-        let n = compute_wlevel h (m.operation, m.operand) / 3 in
+        let n = get_worry_level h (m.operation, m.operand) mod 9699690 in
         let () =
           if n mod m.test = 0 then
-            monkeys.(m.ttrue).items <- n :: monkeys.(m.ttrue).items
-          else monkeys.(m.ffalse).items <- n :: monkeys.(m.ffalse).items
+            monkeys.(m.test_true).items <- n :: monkeys.(m.test_true).items
+          else monkeys.(m.test_false).items <- n :: monkeys.(m.test_false).items
         in
         aux t
   in
@@ -98,7 +96,7 @@ let round n =
   aux 0
 
 let () =
-  for i = 1 to 20 do
+  for i = 1 to 10000 do
     round 8
   done
 
@@ -118,4 +116,4 @@ let compute_res =
   aux 0 []
 
 let result = match compute_res with [ a; b ] -> a * b | _ -> failwith ""
-let () = Printf.printf "Part 1 solution: %d.\n" result
+let () = Printf.printf "Part 2 solution: %d.\n" result
