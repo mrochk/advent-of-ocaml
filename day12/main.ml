@@ -67,13 +67,13 @@ let get_list_adjacents matrix = function
 
 let str_of_coord = function x, y -> string_of_int x ^ "," ^ string_of_int y
 
-let rec enqueue_list queue visited steps = function
+let rec enqueue_not_visited queue visited steps = function
   | h :: t ->
       let str = str_of_coord h in
       if StringMap.find_opt str visited = None then
         let queue = enqueue (h, steps) queue in
-        enqueue_list queue (StringMap.add str true visited) steps t
-      else enqueue_list queue visited steps t
+        enqueue_not_visited queue (StringMap.add str true visited) steps t
+      else enqueue_not_visited queue visited steps t
   | [] -> (queue, visited)
 
 let empty = function [], [] -> true | _ -> false
@@ -82,18 +82,19 @@ let coord_equals cA cB =
   match (cA, cB) with (y, x), (y', x') -> y = y' && x = x'
 
 let coords = function c, _ -> c
-
 let steps = function _, s -> s
 
 let rec bfs matrix target queue visited =
-  if empty queue then failwith "empty queue!"
-  else
+  if not (empty queue) then
     let e, queue = dequeue queue in
     if ch_at matrix (coords e) = target then snd e
     else
       let adjacents = get_list_adjacents matrix (coords e) in
-      let queue, visited = enqueue_list queue visited (steps e + 1) adjacents in
+      let queue, visited =
+        enqueue_not_visited queue visited (steps e + 1) adjacents
+      in
       bfs matrix target queue visited
+  else failwith "empty queue"
 
 let () =
   let queue = ([ ((20, 0), 0) ], []) in
