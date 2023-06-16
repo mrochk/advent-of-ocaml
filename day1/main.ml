@@ -1,3 +1,6 @@
+open Printf
+open List
+
 let file = "input.txt"
 let ic = open_in file
 let empty = ""
@@ -29,9 +32,6 @@ let solve =
   solve' 0 []
 
 let rec sum = function [] -> 0 | h :: t -> h + sum t
-
-open Printf
-open List
 
 let () =
   let result = solve in
