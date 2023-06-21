@@ -1,4 +1,4 @@
-module StringMap = Map.Make (String)
+module StrSet = Set.Make (String)
 
 (* Parse Input *)
 
@@ -13,95 +13,92 @@ let create_matrix input =
 
 (* Queue *)
 
-type 'a queue = 'a list * 'a list
+exception Empty_Queue
 
-let enqueue element = function
+let enq element = function
   | [], [] -> ([ element ], [])
   | [], toreverse -> (List.rev (element :: toreverse), [])
   | toprocess, toreverse -> (toprocess, element :: toreverse)
 
-let dequeue = function
-  | [], toreverse -> (
-      match List.rev toreverse with
-      | [] -> raise Not_found
-      | h :: t -> (h, (t, [])))
+let deq = function
+  | [], [] -> raise Empty_Queue
+  | [], h :: t -> (h, (t, []))
   | h :: t, toreverse -> (h, (t, toreverse))
 
 let empty = function [], [] -> true | _ -> false
 
 (* Utility Functions *)
 
+let string_of_coord = function x, y -> string_of_int x ^ "," ^ string_of_int y
+let exists set e = not (StrSet.find_opt e set = None)
 let ch_at matrix = function y, x -> matrix.(y).(x)
-let str_of_coord = function x, y -> string_of_int x ^ "," ^ string_of_int y
-
-let is_in_matrix matrix = function
-  | y, x ->
-      y >= 0 && x >= 0 && y < Array.length matrix && x < Array.length matrix.(0)
+let coords = function c, _ -> c
+let dist = function _, s -> s
 
 let coord_equals cA cB =
   match (cA, cB) with (y, x), (y', x') -> y = y' && x = x'
 
-let coords = function c, _ -> c
-let steps = function _, s -> s
+let in_matrix matrix = function
+  | y, x ->
+      y >= 0 && x >= 0 && y < Array.length matrix && x < Array.length matrix.(0)
 
-(* Solution *)
+let adj_list = function
+  | y, x -> [ (y - 1, x); (y + 1, x); (y, x - 1); (y, x + 1) ]
 
 let can_reach matrix curr target =
-  is_in_matrix matrix target
+  in_matrix matrix target
   &&
-  let c  = ch_at matrix curr in
+  let c = ch_at matrix curr in
   let c' = int_of_char c in
-  let t  = ch_at matrix target in
+  let t = ch_at matrix target in
   let t' = int_of_char t in
   abs (c' - t') <= 1 || c' >= t' || c = 'S' || (c = 'z' && t = 'E')
 
-let adjacents_coord = function
-  | y, x ->
-      let top   = (y - 1, x) in
-      let bot   = (y + 1, x) in
-      let left  = (y, x - 1) in
-      let right = (y, x + 1) in
-      (top, bot, left, right)
-
-let rec remove_unreachable matrix curr = function
-  | [] -> []
+let rec enq_reachbl matrix e queue visited = function
   | h :: t ->
-      if can_reach matrix curr h then h :: remove_unreachable matrix curr t
-      else remove_unreachable matrix curr t
-
-let get_list_adjacents matrix = function
-  | (y, x) as pos ->
-      let top, bot, left, right = adjacents_coord pos in
-      remove_unreachable matrix pos [ top; bot; left; right ]
-
-let rec enqueue_not_visited queue visited steps = function
-  | h :: t ->
-      let str = str_of_coord h in
-      if StringMap.find_opt str visited = None then
-        let queue = enqueue (h, steps) queue in
-        enqueue_not_visited queue (StringMap.add str true visited) steps t
-      else enqueue_not_visited queue visited steps t
+      let str = string_of_coord h in
+      if can_reach matrix (coords e) h && not (exists visited str) then
+        let queue = enq (h, dist e + 1) queue in
+        let visited = StrSet.add str visited in
+        enq_reachbl matrix e queue visited t
+      else enq_reachbl matrix e queue visited t
   | [] -> (queue, visited)
 
-let enq_adj_notvisited matrix e queue visited =
-  let adjacents = get_list_adjacents matrix (coords e) in
-  enqueue_not_visited queue visited (steps e + 1) adjacents
+let get_a's matrix =
+  let rec aux r =
+    if r < Array.length matrix then
+      let rec aux' c =
+        if c = Array.length matrix.(0) then []
+        else if ch_at matrix (r, c) = 'a' then (r, c) :: aux' (c + 1)
+        else aux' (c + 1)
+      in
+      aux' 0 @ aux (r + 1)
+    else []
+  in
+  aux 0
 
-exception Empty_Queue
+(* Solution *)
 
-let rec bfs matrix target queue visited =
+let rec bfs matrix queue visited =
   if not (empty queue) then
-    let e, q = dequeue queue in
-    if ch_at matrix (coords e) = target then steps e
-    else
-      let q, v = enq_adj_notvisited matrix e q visited in
-      bfs matrix target q v
-  else raise Empty_Queue
+    let e, q = deq queue in
+    match ch_at matrix (coords e) with
+    | 'E' -> (* found shortest path to E *) dist e
+    | _ ->
+        let q, v = enq_reachbl matrix e q visited (adj_list (coords e)) in
+        bfs matrix q v
+  else (* can't reach E *) Int.max_int
+
+let rec solve matrix = function
+  | [] -> Int.max_int
+  | h :: t ->
+      let queue = ([ (h, 0) ], []) in
+      let map = StrSet.add (string_of_coord h) StrSet.empty in
+      min (bfs matrix queue map) (solve matrix t)
 
 let () =
-  let queue  = ([ ((20, 0), 0) ], []) in
-  let target = 'E' in
-  let map    = StringMap.add (str_of_coord (20, 0)) true StringMap.empty in
   let matrix = create_matrix (open_in "input.txt") in
-  let result = bfs matrix target queue map in
-  Printf.printf "Part 1 solution: %d.\n" result
+  let part1 = solve matrix [ (20, 0) ] in
+  let part2 = solve matrix (get_a's matrix) in
+  Printf.printf "Part 1 solution: %d.\n" part1;
+  Printf.printf "Part 2 solution: %d.\n" part2
