@@ -79,26 +79,29 @@ let get_a's matrix =
 
 (* Solution *)
 
-let rec bfs matrix queue visited =
+let rec bfs matrix queue visited curr_min =
   if not (empty queue) then
     let e, q = deq queue in
+    if dist e >= curr_min then 
+      curr_min else
     match ch_at matrix (coords e) with
     | 'E' -> (* found shortest path to E *) dist e
     | _ ->
         let q, v = enq_reachbl matrix e q visited (adj_list (coords e)) in
-        bfs matrix q v
-  else (* can't reach E *) Int.max_int
+        bfs matrix q v curr_min
+  else (* can't reach E *) curr_min
 
-let rec solve matrix = function
-  | [] -> Int.max_int
+let rec solve matrix curr_min = function
+  | [] -> curr_min
   | h :: t ->
       let queue = ([ (h, 0) ], []) in
       let map = StrSet.add (string_of_coord h) StrSet.empty in
-      min (bfs matrix queue map) (solve matrix t)
+      let m = (bfs matrix queue map curr_min) 
+      in solve matrix m t
 
 let () =
   let matrix = create_matrix (open_in "input.txt") in
-  let part1 = solve matrix [ (20, 0) ] in
-  let part2 = solve matrix (get_a's matrix) in
+  let part1 = solve matrix Int.max_int [ (20, 0) ] in
+  let part2 = solve matrix Int.max_int (get_a's matrix) in
   Printf.printf "Part 1 solution: %d.\n" part1;
   Printf.printf "Part 2 solution: %d.\n" part2
