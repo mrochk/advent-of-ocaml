@@ -26,18 +26,22 @@ let rec create_list line =
   match aux 0 with S l :: _, _ -> l | _ -> exit 1
 
 let rec compare_sublists = function
-  | E n :: t, E n' :: t' -> n <= n' && compare_sublists (t, t')
-  | E n :: t, S s :: t' ->
-      compare_sublists ([ E n ], s) && compare_sublists (t, t')
-  | S s :: t, S s' :: t' -> compare_sublists (s, s') && compare_sublists (t, t')
   | S [] :: t, [] -> false
+  | S [ S [] ] :: t, [] -> false
+  | E e :: t, E e' :: t' -> if e > e' then false else compare_sublists (t, t')
+  | S s :: t, S s' :: t' -> compare_sublists (s, s') && compare_sublists (t, t')
+  | E e :: t, S s :: t' ->
+      compare_sublists ([ E e ], s) && compare_sublists (t, t')
+  | S s :: t, E e :: t' ->
+      compare_sublists (s, [ E e ]) && compare_sublists (t, t')
   | _ -> true
 
 let rec compare_lists = function
-  | E n :: t, E n' :: t' -> n <= n' && compare_lists (t, t')
-  | S s :: t, S s' :: t' -> compare_sublists (s, s') && compare_lists (t, t')
-  | S s :: t, E n :: t' -> compare_sublists (s, [ E n ]) && compare_lists (t, t')
-  | E n :: t, S s :: t' -> compare_sublists ([ E n ], s) && compare_lists (t, t')
+  | E e :: t, E e' :: t' -> if e > e' then false else compare_lists (t, t')
+  | S s :: t, S s' :: t' -> compare_sublists (s, s') && compare_lists (t', t')
+  | S s :: t, E e :: t' ->
+      compare_sublists (s, [ E e ]) && compare_lists (t', t')
+  | E e :: t, S s :: t' -> compare_sublists ([ E e ], s) && compare_lists (t, t')
   | [], _ -> true
   | _, [] -> false
 
@@ -55,4 +59,8 @@ let rec solve input =
   in
   aux 1 0
 
-let () = Printf.printf "Result = %d.\n" (solve (open_in "input.txt"))
+let () =
+  let small = open_in "input_small.txt" in
+  let input = open_in "input.txt" in
+  Printf.printf "Small input solution = %d.\n" (solve small);
+  Printf.printf "Part 1 solution = %d.\n" (solve input)
