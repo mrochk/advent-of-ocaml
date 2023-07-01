@@ -30,20 +30,17 @@ let rec compare_sublists = function
   | S [ S [] ] :: t, [] -> false
   | E e :: t, E e' :: t' -> if e > e' then false else compare_sublists (t, t')
   | S s :: t, S s' :: t' -> compare_sublists (s, s') && compare_sublists (t, t')
-  | E e :: t, S s :: t' ->
-      compare_sublists ([ E e ], s) && compare_sublists (t, t')
-  | S s :: t, E e :: t' ->
-      compare_sublists (s, [ E e ]) && compare_sublists (t, t')
+  | E e :: t, S s :: t' -> compare_sublists ([ E e ], s) && compare_sublists (t, t')
+  | S s :: t, E e :: t' -> compare_sublists (s, [ E e ]) && compare_sublists (t, t')
   | _ -> true
 
 let rec compare_lists = function
   | E e :: t, E e' :: t' -> if e > e' then false else compare_lists (t, t')
   | S s :: t, S s' :: t' -> compare_sublists (s, s') && compare_lists (t', t')
-  | S s :: t, E e :: t' ->
-      compare_sublists (s, [ E e ]) && compare_lists (t', t')
+  | S s :: t, E e :: t' -> compare_sublists (s, [ E e ]) && compare_lists (t', t')
   | E e :: t, S s :: t' -> compare_sublists ([ E e ], s) && compare_lists (t, t')
-  | [], _ -> true
-  | _, [] -> false
+  | a, [] when a != [] -> false
+  | _ -> true
 
 let rec solve input =
   let rec aux index sum =
@@ -60,7 +57,7 @@ let rec solve input =
   aux 1 0
 
 let () =
-  let small = open_in "input_small.txt" in
+  let test = open_in "test.txt" in
   let input = open_in "input.txt" in
-  Printf.printf "Small input solution = %d.\n" (solve small);
-  Printf.printf "Part 1 solution = %d.\n" (solve input)
+  Printf.printf "Test input solution = %d.\n" (solve test);
+  Printf.printf "Part 1 solution (wrong) = %d.\n" (solve input)
